@@ -32,3 +32,8 @@ VITE_API_BASE_URL=http://localhost:5000
 npm run dev
 ```
 Frontend runs at http://localhost:5173.
+
+This frontend communicates with the backend API here:
+[Payroll System Backend](https://github.com/lance-pallesco/payroll-api)
+
+Check the backend README for instructions on setting up the API and database.
