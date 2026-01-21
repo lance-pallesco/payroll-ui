@@ -1,3 +1,5 @@
+import * as React from 'react'
+import { format } from 'date-fns'
 import { ArchiveIcon, Calculator, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -6,139 +8,174 @@ import { AddEmployeeDialog } from '@/components/employees/AddEmployeeDialog'
 import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog'
 import { DeleteEmployeeDialog } from '@/components/employees/DeleteEmployeeDialog'
 import { ComputePayrollDialog } from '@/components/employees/ComputePayrollDialog'
-
-const items = [
-  {
-    id: '1',
-    productName: 'Chair',
-    model: 'Wooden Garden  Chair',
-    src: 'https://cdn.shadcnstudio.com/ss-assets/products/product-1.png',
-    fallback: 'WGC',
-    color: 'Black',
-    category: 'Furniture',
-    price: '$269.09'
-  },
-  {
-    id: '2',
-    productName: 'Nike Shoes',
-    model: 'Jordan 1 Retro OG',
-    src: 'https://cdn.shadcnstudio.com/ss-assets/products/product-2.png',
-    fallback: 'J1R',
-    color: 'Red',
-    category: 'Sneakers',
-    price: '$150.00'
-  },
-  {
-    id: '3',
-    productName: 'OnePluse',
-    model: 'OnePlus 7 Pro',
-    src: 'https://cdn.shadcnstudio.com/ss-assets/products/product-3.png',
-    fallback: 'O7P',
-    color: 'Nebula Blue',
-    category: 'Smartphone',
-    price: '$869.00'
-  },
-  {
-    id: '4',
-    productName: 'Nintendo',
-    model: 'Nintendo Switch',
-    src: 'https://cdn.shadcnstudio.com/ss-assets/products/product-4.png',
-    fallback: 'NS',
-    color: 'Neon Blue and Red',
-    category: 'Console Gaming',
-    price: '$499.00'
-  },
-  {
-    id: '5',
-    productName: 'Apple Magic Mouse',
-    model: 'Apple Magic Mouse',
-    src: 'https://cdn.shadcnstudio.com/ss-assets/products/product-5.png',
-    fallback: 'AMM',
-    color: 'Black',
-    category: 'Electronics',
-    price: '$110.29'
-  }
-]
+import { employeeApi, type Employee } from '@/services/api'
 
 const ProductTableDemo = () => {
+  const [employees, setEmployees] = React.useState<Employee[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+
+  const fetchEmployees = React.useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await employeeApi.getAll()
+      console.log(data)
+      setEmployees(data)
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to fetch employees. Please check if the API is running.")
+      console.error("Error fetching employees:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    fetchEmployees()
+  }, [fetchEmployees])
+
+  const handleRefresh = () => {
+    fetchEmployees()
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "MMM dd, yyyy")
+    } catch {
+      return dateString
+    }
+  }
+
+  const formatDailyRate = (rate: number) => {
+    return `PHP ${rate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  const formatWorkingDays = (days: number[]) => {
+    if (!days || days.length === 0) return "N/A"
+
+    const dayMap: Record<number, string> = {
+      1: "M",
+      2: "T",
+      3: "W",
+      4: "TH",
+      5: "F",
+      6: "S",
+      7: "SU",
+    }
+
+    return days
+      .map(d => dayMap[d])
+      .filter(Boolean)
+      .join("")
+  }
+
+  const getFullName = (employee: Employee) => {
+    const parts = [
+      employee.lastName,
+      employee.firstName,
+    ].filter(Boolean)
+    return parts.join(", ")
+  }
 
   return (
-
     <div className='space-y-4'>
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Employees</h2>
-        <AddEmployeeDialog />
+        <div className="flex gap-2">
+          <AddEmployeeDialog onEmployeeAdded={handleRefresh} />
+        </div>
       </div>
-    <div className='w-full'>
-      <div className='[&>div]:rounded-sm [&>div]:border'>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className='text-left'>Full Name</TableHead>
-              <TableHead className='text-left'>Date of Birth</TableHead>
-              <TableHead className='text-left'>Working Days</TableHead>
-              <TableHead className='text-left'>Daily Rate</TableHead>
-              <TableHead className='w-0 text-center'>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className='text-left'>
-            {items.map(item => (
-              <TableRow key={item.id} className='has-data-[state=checked]:bg-muted/50'>
-                <TableCell>
-                  <div className='flex items-center gap-3'>
-                    <div>
-                      <div className='font-medium'>{item.productName}</div>
-                      <span className='text-muted-foreground mt-0.5 text-xs'>{item.model}</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>{item.color}</TableCell>
-                <TableCell>{item.category}</TableCell>
-                <TableCell>{item.price}</TableCell>
-                <TableCell className="flex justify-center gap-2">
-                  {/* Edit */}
-                  <EditEmployeeDialog employee={item}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full cursor-pointer"
-                      aria-label={`edit-${item.id}`}
-                    >
-                      <PencilIcon />
-                    </Button>
-                  </EditEmployeeDialog>
 
-                  {/* Delete */}
-                  <DeleteEmployeeDialog employee={item}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full cursor-pointer"
-                      aria-label={`delete-${item.id}`}
-                    >
-                      <Trash2Icon />
-                    </Button>
-                  </DeleteEmployeeDialog>
+      {error && (
+        <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+          {error}
+        </div>
+      )}
 
-                  {/* Compute */}
-                  <ComputePayrollDialog employee={item}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full cursor-pointer"
-                      aria-label={`compute-${item.id}`}
-                    >
-                      <Calculator />
-                    </Button>
-                  </ComputePayrollDialog>
-                </TableCell>
+      <div className='w-full'>
+        <div className='[&>div]:rounded-sm [&>div]:border'>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className='text-left'>Full Name</TableHead>
+                <TableHead className='text-left'>Date of Birth</TableHead>
+                <TableHead className='text-left'>Working Days</TableHead>
+                <TableHead className='text-left'>Daily Rate</TableHead>
+                <TableHead className='w-0 text-center'>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody className='text-left'>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    Loading employees...
+                  </TableCell>
+                </TableRow>
+              ) : employees.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No employees found. Add your first employee to get started.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                employees.map(employee => (
+                  <TableRow key={employee.id} className='has-data-[state=checked]:bg-muted/50'>
+                    <TableCell>
+                      <div className='flex items-center gap-3'>
+                        <div>
+                          <div className='font-medium'>{getFullName(employee)}</div>
+                          <span className='text-muted-foreground mt-0.5 text-xs'>{employee.employeeNumber}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatDate(employee.dateOfBirth)}</TableCell>
+                    <TableCell>{formatWorkingDays(employee.workingDayNumbers)}</TableCell>
+                    <TableCell>{formatDailyRate(employee.dailyRate)}</TableCell>
+                    <TableCell className="flex justify-center gap-2">
+                      {/* Edit */}
+                      <EditEmployeeDialog employee={employee} onEmployeeUpdated={handleRefresh}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full cursor-pointer"
+                          aria-label={`edit-${employee.id}`}
+                        >
+                          <PencilIcon />
+                        </Button>
+                      </EditEmployeeDialog>
+
+                      {/* Delete */}
+                      <DeleteEmployeeDialog employee={employee} onEmployeeDeleted={handleRefresh}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full cursor-pointer"
+                          aria-label={`delete-${employee.id}`}
+                        >
+                          <Trash2Icon />
+                        </Button>
+                      </DeleteEmployeeDialog>
+
+                      {/* Compute */}
+                      <ComputePayrollDialog employee={employee}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full cursor-pointer"
+                          aria-label={`compute-${employee.id}`}
+                        >
+                          <Calculator />
+                        </Button>
+                      </ComputePayrollDialog>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
-  </div>
   )
 }
 

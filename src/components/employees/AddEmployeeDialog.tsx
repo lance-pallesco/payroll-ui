@@ -11,13 +11,20 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
+import { employeeApi } from "@/services/api"
 
 const WORKING_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-export function AddEmployeeDialog() {
+interface AddEmployeeDialogProps {
+  onEmployeeAdded?: () => void
+}
+
+export function AddEmployeeDialog({ onEmployeeAdded }: AddEmployeeDialogProps) {
   const [open, setOpen] = React.useState(false)
   const [dob, setDob] = React.useState<Date | undefined>()
   const [workingDays, setWorkingDays] = React.useState<string[]>([])
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
   const toggleDay = (day: string) => {
     setWorkingDays(prev =>
@@ -25,6 +32,44 @@ export function AddEmployeeDialog() {
         ? prev.filter(d => d !== day)
         : [...prev, day]
     )
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    
+    const firstName = (document.getElementById("firstName") as HTMLInputElement)?.value
+    const lastName = (document.getElementById("lastName") as HTMLInputElement)?.value
+    const dailyRate = parseFloat((document.getElementById("dailyRate") as HTMLInputElement)?.value || "0")
+
+    if (!firstName || !lastName || !dob || !dailyRate || workingDays.length === 0) {
+      setError("Please fill in all required fields")
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await employeeApi.create({
+        firstName,
+        lastName,
+        dateOfBirth: format(dob, "yyyy-MM-dd"),
+        dailyRate,
+        workingDayNumbers: workingDays.map(day => WORKING_DAYS.indexOf(day) + 1),
+      })
+
+      setDob(undefined)
+      setWorkingDays([])
+      setOpen(false)
+      if (onEmployeeAdded) {
+        onEmployeeAdded()
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to create employee. Please try again.")
+      console.error("Error creating employee:", err)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -40,18 +85,24 @@ export function AddEmployeeDialog() {
           <DialogTitle>Add Employee</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4">
+        <form onSubmit={handleSubmit} className="grid gap-4">
+
+          {error && (
+            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+              {error}
+            </div>
+          )}
 
           {/* First Name */}
           <div className="grid gap-2">
             <Label htmlFor="firstName">First Name</Label>
-            <Input id="firstName" placeholder="Juan" />
+            <Input id="firstName" placeholder="Juan" required />
           </div>
 
           {/* Last Name */}
           <div className="grid gap-2">
             <Label htmlFor="lastName">Last Name</Label>
-            <Input id="lastName" placeholder="Dela Cruz" />
+            <Input id="lastName" placeholder="Dela Cruz" required />
           </div>
 
           {/* Date of Birth */}
@@ -87,7 +138,10 @@ export function AddEmployeeDialog() {
             <Input
               id="dailyRate"
               type="number"
-              placeholder="1000"
+              placeholder="2000"
+              step="0.01"
+              min="0"
+              required
             />
           </div>
 
@@ -124,14 +178,22 @@ export function AddEmployeeDialog() {
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={() => {
+                setOpen(false)
+                setError(null)
+              }}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button>
-              Save Employee
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Employee"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

@@ -11,25 +11,85 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
+import { employeeApi } from "@/services/api"
+import type { Employee } from "@/services/api"
 
-const WORKING_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+const WORKING_DAYS = [
+  { label: "Monday", value: 1 },
+  { label: "Tuesday", value: 2 },
+  { label: "Wednesday", value: 3 },
+  { label: "Thursday", value: 4 },
+  { label: "Friday", value: 5 },
+  { label: "Saturday", value: 6 },
+  { label: "Sunday", value: 7 },
+]
+
 
 interface EditEmployeeDialogProps {
-  employee?: any,
+  employee?: Employee,
   children: React.ReactNode
+  onEmployeeUpdated?: () => void
 }
 
-export function EditEmployeeDialog({ employee, children }: EditEmployeeDialogProps) {
+export function EditEmployeeDialog({ employee, children, onEmployeeUpdated }: EditEmployeeDialogProps) {
   const [open, setOpen] = React.useState(false)
-  const [dob, setDob] = React.useState<Date | undefined>(employee?.dob ? new Date(employee.dob) : undefined)
-  const [workingDays, setWorkingDays] = React.useState<string[]>(employee?.workingDays || [])
+  const [dob, setDob] = React.useState<Date | undefined>(employee?.dateOfBirth ? new Date(employee.dateOfBirth) : undefined)
+  const [workingDays, setWorkingDays] = React.useState<number[]>(employee?.workingDayNumbers || [])
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
-  const toggleDay = (day: string) => {
+  React.useEffect(() => {
+    if (open && employee) {
+      setDob(employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined)
+      setWorkingDays(employee.workingDayNumbers || [])
+      setError(null)
+    }
+  }, [open, employee])
+
+  const toggleDay = (day: number) => {
     setWorkingDays(prev =>
       prev.includes(day)
         ? prev.filter(d => d !== day)
         : [...prev, day]
     )
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!employee?.id) return
+
+    setError(null)
+    
+    const firstName = (document.getElementById("edit-firstName") as HTMLInputElement)?.value
+    const lastName = (document.getElementById("edit-lastName") as HTMLInputElement)?.value
+    const dailyRate = parseFloat((document.getElementById("edit-dailyRate") as HTMLInputElement)?.value || "0")
+
+    if (!firstName || !lastName || !dob || !dailyRate || workingDays.length === 0) {
+      setError("Please fill in all required fields")
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await employeeApi.update(employee.id, {
+        firstName,
+        lastName,
+        dateOfBirth: format(dob, "yyyy-MM-dd"),
+        dailyRate,
+        workingDayNumbers: workingDays,
+      })
+
+      setOpen(false)
+      if (onEmployeeUpdated) {
+        onEmployeeUpdated()
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to update employee. Please try again.")
+      console.error("Error updating employee:", err)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -45,17 +105,23 @@ export function EditEmployeeDialog({ employee, children }: EditEmployeeDialogPro
           <DialogTitle>Edit Employee</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4">
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          {error && (
+            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+              {error}
+            </div>
+          )}
+
           {/* First Name */}
           <div className="grid gap-2">
-            <Label htmlFor="firstName">First Name</Label>
-            <Input id="firstName" defaultValue={employee?.firstName || ""} />
+            <Label htmlFor="edit-firstName">First Name</Label>
+            <Input id="edit-firstName" defaultValue={employee?.firstName || ""} required />
           </div>
 
           {/* Last Name */}
           <div className="grid gap-2">
-            <Label htmlFor="lastName">Last Name</Label>
-            <Input id="lastName" defaultValue={employee?.lastName || ""} />
+            <Label htmlFor="edit-lastName">Last Name</Label>
+            <Input id="edit-lastName" defaultValue={employee?.lastName || ""} required />
           </div>
 
           {/* Date of Birth */}
@@ -87,8 +153,8 @@ export function EditEmployeeDialog({ employee, children }: EditEmployeeDialogPro
 
           {/* Daily Rate */}
           <div className="grid gap-2">
-            <Label htmlFor="dailyRate">Daily Rate</Label>
-            <Input id="dailyRate" type="number" defaultValue={employee?.dailyRate || ""} />
+            <Label htmlFor="edit-dailyRate">Daily Rate</Label>
+            <Input id="edit-dailyRate" type="number" defaultValue={employee?.dailyRate || ""} step="0.01" min="0" required />
           </div>
 
           {/* Working Days */}
@@ -98,15 +164,25 @@ export function EditEmployeeDialog({ employee, children }: EditEmployeeDialogPro
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="justify-start">
                   {workingDays.length > 0
-                    ? workingDays.join(", ")
+                    ? WORKING_DAYS
+                        .filter(d => workingDays.includes(d.value))
+                        .map(d => d.label)
+                        .join(", ")
                     : "Select working days"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
                 {WORKING_DAYS.map(day => (
-                  <DropdownMenuItem key={day} className="flex items-center gap-2" onSelect={e => e.preventDefault()}>
-                    <Checkbox checked={workingDays.includes(day)} onCheckedChange={() => toggleDay(day)} />
-                    <span>{day}</span>
+                  <DropdownMenuItem
+                    key={day.value}
+                    className="flex items-center gap-2"
+                    onSelect={e => e.preventDefault()}
+                  >
+                    <Checkbox
+                      checked={workingDays.includes(day.value)}
+                      onCheckedChange={() => toggleDay(day.value)}
+                    />
+                    <span>{day.label}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -114,10 +190,22 @@ export function EditEmployeeDialog({ employee, children }: EditEmployeeDialogPro
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button>Save Changes</Button>
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={() => {
+                setOpen(false)
+                setError(null)
+              }}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   )
