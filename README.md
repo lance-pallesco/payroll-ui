@@ -1,7 +1,7 @@
 # Payroll System Frontend
 
-## This repository contains the backend RESTful API for a fictional payroll system.
-The system allows managing employees and computing take-home pay based on specific business rules.
+- This repository contains the frontend user interface for the Payroll System.
+It communicates with the backend REST API to manage employees and compute payroll.
 
 ## Features
 - View all employees
