@@ -140,12 +140,13 @@ export function EditEmployeeDialog({ employee, children, onEmployeeUpdated }: Ed
                   {dob ? format(dob, "PPP") : "Select date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 overflow-hidden" align="start">
                 <Calendar
                   mode="single"
                   selected={dob}
+                  defaultMonth={dob}
+                  captionLayout="dropdown"
                   onSelect={setDob}
-                  initialFocus
                 />
               </PopoverContent>
             </Popover>

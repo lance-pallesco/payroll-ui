@@ -107,8 +107,14 @@ export function ComputePayrollDialog({ employee, children }: ComputePayrollDialo
                   {startDate ? format(startDate, "PPP") : "Select date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+              <PopoverContent className="w-auto p-0 overflow-hidden">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  defaultMonth={startDate ?? new Date()}
+                  captionLayout="dropdown"
+                  onSelect={setStartDate}
+                />
               </PopoverContent>
             </Popover>
           </div>
@@ -123,8 +129,14 @@ export function ComputePayrollDialog({ employee, children }: ComputePayrollDialo
                   {endDate ? format(endDate, "PPP") : "Select date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+              <PopoverContent className="w-auto p-0 overflow-hidden">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  defaultMonth={endDate ?? startDate ?? new Date()}
+                  captionLayout="dropdown"
+                  onSelect={setEndDate}
+                />
               </PopoverContent>
             </Popover>
           </div>

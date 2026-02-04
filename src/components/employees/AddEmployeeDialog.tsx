@@ -121,12 +121,13 @@ export function AddEmployeeDialog({ onEmployeeAdded }: AddEmployeeDialogProps) {
                   {dob ? format(dob, "PPP") : "Select date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 overflow-hidden" align="start">
                 <Calendar
                   mode="single"
                   selected={dob}
-                  onSelect={setDob}
-                  initialFocus
+                  defaultMonth={dob}
+                  captionLayout="dropdown"
+                  onSelect={setDob}                  
                 />
               </PopoverContent>
             </Popover>
